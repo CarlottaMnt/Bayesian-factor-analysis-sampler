@@ -3,7 +3,7 @@
 The fuction implements the models specified in Hogan and Tchernis (2004).
 In particular it builds five Metropolis Hastings steps, one for each model, within a Gibbs sampling alghorithm. 
 
-The empirical illustration is based on the public data-set from "A misura di comune". In particular I focus on the Varese province which entails 138 different areas. I analyse the year 2014 and 2015. The output of the function are simulated posterior parameters distributions, in particular I return the the estimates for <img src="https://render.githubusercontent.com/render/math?math=\boldsymbol{\lambda}">, <img src="https://render.githubusercontent.com/render/math?math=\delta_i">,<img src="https://render.githubusercontent.com/render/math?math= \boldsymbol{Y}^{\textrm{rep}}"> and **d**. 
+The empirical illustration is based on the public data-set from "A misura di comune". In particular I focus on the Varese province which entails 138 different areas. I analyse the year 2014 and 2015. The output of the function are simulated posterior parameters distributions, in particular I return the the estimates for <img src="https://render.githubusercontent.com/render/math?math=\boldsymbol{\lambda}">, <img src="https://render.githubusercontent.com/render/math?math=\delta_i">,**d** the mean vector of the previous parameter and **Y**, replications of the dataset for assessing model fit. 
 
 The main purpose of the function is to model the Varese areas' spatial correlation, allowing the inclusion of such information in the latent factor estimation. Within the implementation, the latent factor should represents the latent well-being of each areas. 
 
