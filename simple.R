@@ -36,11 +36,18 @@ simple <- function(n_iter = 1000,
   y_1 <- rep(NA,N*J)
   o_c <- rep(NA,N)
   W_c=matrix(0,N,N)
-  samples <- list(lambda=matrix(NA,n_iter,J),
-                  delta=matrix(NA,n_iter,N),
+  W_d_04=matrix(0,N,N)
+  samples <- list(lambda=matrix(NA,n_iter,J*L),
+                  delta=matrix(NA,n_iter,N*L),
                   a=rep(NA,n_iter),
                   y_rep = matrix(NA,n_iter,N*J),
-                  d=matrix(NA,n_iter,N))
+                  d=matrix(NA,n_iter,N*L),
+                  D=matrix(NA,n_iter,(N*L)*(N*L)),
+                  Diff=matrix(NA,n_iter,(N*L)*(N*L)),
+                  PSI=matrix(NA,n_iter,(N*L)*(N*L)),
+                  Sigma=matrix(NA,n_iter,J*J)
+                  )
+  
   start_time = Sys.time()
   count=0
   for (t in 2:(n_iter+1))
@@ -75,8 +82,6 @@ simple <- function(n_iter = 1000,
     
       #Step 3
       cat("Start step 3")
-      #Lambda = kronecker(diag(N),param$lambda)
-      #SSigma=  solve(kronecker(diag(N),param$Sigma))
       y_1=as.vector(t(y))
       D= solve(param$PSI + diag(sum((param$lambda[,1])^2 /
                                       diag(param$Sigma)),N))
@@ -87,11 +92,11 @@ simple <- function(n_iter = 1000,
                           (y_1[(J*j+1):(J *(j+1))]-param$mu))
       }
       d = D %*% prova
-      #d = D %*% t(Lambda)%*% (SSigma)%*%(as.vector(y-rep.row(param$mu,N)))
       cat("End step 3")
       param$delta= t(rmvnorm(1,d,D))
       samples[["delta"]][t-1,]=t((param$delta))
       samples[["d"]][t-1,]=d
+      samples[["D"]][t-1,]=as.vector(D)
       #Step 4
       for (j in 1:J)
       {
@@ -102,6 +107,7 @@ simple <- function(n_iter = 1000,
                                     param$delta * param$lambda[j,L]))+ beta)/2
         param$Sigma[j,j]=rinvgamma(1,alpha.hat,beta.hat)
       }
+      samples[["Sigma"]][t-1,]=as.vector(diag(param$Sigma))
       #Step 5 Metropolis Hastings
       if (model!="0")
       {
@@ -122,13 +128,14 @@ simple <- function(n_iter = 1000,
               return(dmvnorm(t(param$delta),rep(0,N),PSI)*
                        dnorm(x,mu_a,V_a)*dnorm(mu_x,x,sqrt(tuning)))
             }
-          A =  (target_1(proposed_a,param$a,W=PSI_2014))/
-            (target_1(param$a,proposed_a,W=PSI_2014))
+          A =  (target_1(proposed_a,param$a,W=PSI_04))/
+            (target_1(param$a,proposed_a,W=PSI_04))
           if (A == "NaN")
           {
             cat("A",A)
             A=param$a
           }
+            
         }
       #Model 3A
       
@@ -139,7 +146,7 @@ simple <- function(n_iter = 1000,
               Xi <- eigen(R)
               xi <- sort(Xi$values)
               xi_inv <- 1/(xi)
-              if (xi_inv[1] > x  | x > xi_inv[138])
+              if (xi_inv[1] > x  | x > xi_inv[N])
               {
                 print("Proposal out of support")
                 return(0)
@@ -164,12 +171,13 @@ simple <- function(n_iter = 1000,
             Xi <- eigen(R)
             xi <- sort(Xi$values)
             xi_inv <- 1/(xi)
-            if (xi_inv[1] > x  | x > xi_inv[138])
+            if (xi_inv[1] > x  | x > xi_inv[N])
             {
               print("Proposal out of support")
               return(0)
             }
             B=O-x*W
+            diag(B) <- diag(O)
             B_inv=solve(B)
             M=diag(B_inv)
             M_1=sqrt(diag(1/M))
@@ -178,7 +186,7 @@ simple <- function(n_iter = 1000,
                      dnorm(x,mu_a,V_a)* dnorm(mu_x,x,sqrt(tuning)))
           }   
           A =  (target_3(proposed_a, param$a,R,W,O))/
-            (target_3(param$a,proposed_a,R,W,O))  
+            (target_3(param$a,proposed_a,R,W,O))
         }
       #Model 3C
         if (model =="4")
@@ -196,10 +204,11 @@ simple <- function(n_iter = 1000,
               O_c=diag(o_c)
               for (i in 1:dim(y)[1])
               {
-                W_c[i,]= -exp(-x*W[i,])
+                W_c[i,]= exp(-x*W[i,])
               }
               
               Diff= O_c-W_c
+              diag(Diff) <- 1
               PSI=solve(Diff)
               return(dmvnorm(t(param$delta),rep(0,N),PSI)*
                        dnorm(x,mu_a,V_a)* dnorm(mu_x,x,sqrt(tuning)))
@@ -220,7 +229,7 @@ simple <- function(n_iter = 1000,
             Xi <- eigen(R)
             xi <- sort(Xi$values)
             xi_inv <- 1/(xi)
-            if (xi_inv[1] > x  | x > xi_inv[138])
+            if (xi_inv[1] > x  | x > xi_inv[N])
             {
               print("Proposal out of support")
               return(0)
@@ -230,6 +239,7 @@ simple <- function(n_iter = 1000,
               W_c[i,w[[i]]]= exp(-W[[i]] * gamma)
             }
             B=diag(N)- x * W_c
+            diag(B) <- 1
             B_inv=solve(B)
             A=diag(B_inv)
             A=sqrt(diag(1/A))
@@ -239,11 +249,11 @@ simple <- function(n_iter = 1000,
           }
           A =  (target_5(proposed_a,param$a,W,R=R,gamma=1,w))/
             (target_5(param$a,proposed_a,W,R=R,gamma=1,w))
-         # if (A == "NaN")
-         # {
-         #   cat("A",A)
-         #   A=param$a
-         # }
+          if (A == "NaN")
+          {
+            cat("A",A)
+            A=param$a
+          }
         }
         #Model 3E
         if(model=="6")
@@ -261,14 +271,14 @@ simple <- function(n_iter = 1000,
             O_c=diag(o_c)
             for (i in 1:N)
             {
-              W_c[i,w[[i]]]=-exp(-gamma*W[[i]])
+              W_c[i,w[[i]]]=exp(-gamma*W[[i]])
             }
             B = O_c - x*W_c
             B_inv = solve(B)
             A=diag(B_inv)
             A=sqrt(diag(1/A))
-            PSI = A %*% B_inv %*% A
-            return(dmvnorm(t(param$delta),rep(0,N),PSI)*
+            param$PSI = A %*% B_inv %*% A
+            return(dmvnorm(t(param$delta),rep(0,N),param$PSI)*
                      dnorm(x,mu_a,V_a)* dnorm(mu_x,x,sqrt(tuning)))
           }
           A =  (target_6(proposed_a, param$a,W,gamma,w))/
@@ -280,7 +290,61 @@ simple <- function(n_iter = 1000,
           param$a = proposed_a
           count = count + 1
         }
+        if (model == "1")
+        {
+          param$PSI=exp(-param$a* W)
+          param$PSI[lower.tri(param$PSI)] <- t(param$PSI)[lower.tri(param$PSI)]
+        }
+        if (model == "2")
+        {
+          B=O-param$a*R
+          diag(B) <- 1
+          B_inv=solve(B)
+          M=diag(B_inv)
+          M_1=sqrt(diag(1/M))
+          param$PSI=M_1 %*% B_inv %*% M_1  
+        }
+        if (model =="3")
+        {
+          B=O-param$a*W
+          diag(B) <- diag(O)
+          B_inv=solve(B)
+          M=diag(B_inv)
+          M_1=sqrt(diag(1/M))
+          param$PSI=M_1 %*% B_inv %*% M_1
+        }
+        if (model =="4")
+        {
+          for (i in 1:N){
+            o_c[i]=sum(exp(-param$a*W[i,]))
+          }
+          O_c=diag(o_c)
+          for (i in 1:N[1])
+          {
+            W_c[i,]= -exp(-param$a*W[i,])
+          }
+          
+          Diff= O_c-W_c
+          diag(Diff) <- 1
+          samples[["Diff"]][t-1,]=Diff
+          param$PSI=solve(Diff)
+        }
+        if (model =="5")
+        {
+          for (i in 1:N)
+          {
+            W_d_04[i,w[[i]]]= -exp(-gamma*W[[i]])
+          }
+          B=diag(N)- param$a * W_d_04
+          diag(B)<-1
+          samples[["Diff"]][t-1,]=B
+          B_inv=solve(B)
+          M=diag(B_inv)
+          M=sqrt(diag(1/M))
+          param$PSI = M %*% B_inv %*% M 
+        }
       samples[["a"]][t-1]=param$a
+      samples[["PSI"]][t-1,]=as.vector(param$PSI)
       }
       for (j in (0:(N-1)))
       {
@@ -291,5 +355,4 @@ simple <- function(n_iter = 1000,
   cat("\nDONE\n","Metropolis Hastings Acceptance rate", count/n_iter )
   return(samples)
 }
-
 
