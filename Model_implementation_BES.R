@@ -25,7 +25,7 @@ library(rstan)
 #devtools::install_github("karthik/wesanderson")
 #library(wesanderson)
 rm(list=ls())
-source("Sampler_debug.R")
+source("simple.R")
 #Read_in the data
 data<- read.csv("BES_data/Imputed_BES_dataset.csv")
 data <- data %>% 
@@ -38,7 +38,7 @@ data_norm <- read.csv("BES_data/Imputed_BES_normalized.csv")
 #factor_eco <- read.csv("factor_econ.csv")
 italgeo <-  sf::st_read("BES_data/italgeo.shp")
 italgeo$DEN_UTS <- as.character(italgeo$DEN_UTS)
-#English names
+#English names of the elementary indicato
 names <- vector("list",length=4)
 names(names) <- c("Overall","Social","Economic","Environmental")
 names[[1]] <-  c("Employees in cultural business",
@@ -115,18 +115,10 @@ names[[4]] <- c("Landfill of urban waste",
                   "Separate collection of municipal waste"
 )
 
-
-#Import data-set for sustainable development domains
-#social <- read.csv("economic_BES_normalized.csv")
-#economic <- read.csv("Economic_BES_normalized.csv")
-#environment <- read.csv("Environment_BES_normalized.csv")
-#Non normalized data
+#Assign the names to the data
 colnames(data)[2:46] <- names[[1]]
 colnames(data_norm)[1:45] <- names[[1]]
-#colnames(economic)[1:26] <- economic_name
-#colnames(economic)[1:12] <- economic_name
-#colnames(environment)[1:4] <- environ_name
-#Remove absent provinces
+#Remove absent provinces and uniformy the names
 data <- data %>% filter(!(comune %in% c("Olbia-Tempio","Medio Campidano","Ogliastra")))
 data <- data %>% 
   mutate(comune= case_when(
@@ -135,7 +127,6 @@ data <- data %>%
     TRUE ~ as.character(comune)))
 data_norm <- data_norm %>% 
   mutate(anno = data$anno, comune=data$comune)
-#Create data-set for each well-being domains
 #Italy geo locations
 italgeo <- italgeo %>% 
   mutate(comune=DEN_UTS)
@@ -154,8 +145,8 @@ italgeo <- italgeo %>%
 longlat04 <- data %>% 
   filter(anno=="2004") %>% 
   dplyr::select(`data$long`,`data$lat`) %>% as.matrix()
-PSI_04 <- as.matrix(dist(longlat04))#Euclidean Distance
-PSI_04.inv <- 1/PSI_04
+PSI_04 <- as.matrix(dist(longlat04))  #Euclidean Distance
+PSI_04.inv <- 1/PSI_04  #Inverse of the distances:weights
 diag(PSI_04.inv) <- 0
 
 #Model CAR 2-3
@@ -189,30 +180,15 @@ for (i in 1:N)
       W_b[i,j]= 0
   }
 }
-#Model 3C
-o_c <- rep(NA,N)
-W_c = matrix(0,N,N)
-for (i in 1:N){
-  o_c[i]=sum(exp(-x*PSI_04[i,]))
-}
-O_c=diag(o_c)
-for (i in 1:N)
-{
-  W_c[i,] = exp(-x*PSI_04[i,])
-}
-
-Diff = O_c - W_c
-diag(Diff) <- 1
-PSI = solve(Diff)
-return(dmvnorm(t(param$delta),rep(0,N),PSI)*
-         dnorm(x,mu_a,V_a)* dnorm(mu_x,x,sqrt(tuning)))
 #Model 3D
 PSI_04_d <- nbdists(w, coords= longlat04,longlat = TRUE) #Crate the list of neighbors
+
 #Model implementation-------------------------------------------------------
 
 models <-  c("0","1","2","3","4","5","6")
 years <- c("2004","2005","2006","2007","2008","2009","2010","2011","2012","2013","2014","2015","2016","2017")
 domains <- c("Social","Economic","Environmental")
+Seed=123
 comune <-  data %>%
        gather(Indicatore, Value,-c(anno,comune)) %>% 
        filter(Indicatore %in% names[[1]]) %>% 
@@ -241,14 +217,16 @@ spmatrices[["5"]][["w"]] <- w
 spmatrices[["6"]][["R"]] <- R
 spmatrices[["6"]][["W"]] <- PSI_04_d
 spmatrices[["6"]][["w"]] <- w
-Seed=123
 
-y <- vector("list",length=4)
-y_norm <- vector("list",length=4)
-y_center <- vector("list",length=4)
+#OUTCOME VARIABLE
+y <- vector("list",length=4) #Basic
+y_norm <- vector("list",length=4) #Normalized
+y_scale <- vector("list",length=4) #Scaled
+
 names(y) <- domains
 names(y_norm) <- domains
-names(y_center) <- domains
+names(y_scale) <- domains
+		     
 for (d in domains)
 {
   y[[d]] <- vector("list",length=length(years))
@@ -271,7 +249,7 @@ for (d in domains)
        dplyr::filter(anno==t) %>% 
        select(-c(anno,comune)) %>% 
        as.matrix()
-     y_center[[d]][[t]] <- data %>%
+     y_scale[[d]][[t]] <- data %>%
        tidyr::gather(Indicatore, Value,-c(anno,comune)) %>% 
        filter(Indicatore %in% names[[d]]) %>% 
        tidyr::spread(Indicatore,Value) %>% 
@@ -282,14 +260,16 @@ for (d in domains)
   }
 }
 
+#Implementaiton of model "0","1","2","3"
+		     
 for (d in domains)
 {
   for (m in models[models %in% c("0","1","2","3")])
   {
     for (t in years)
     {
-      N=dim(y_center[[d]][[t]])[1]
-      J=dim(y_center[[d]][[t]])[2]-2
+      N=dim(y_scale[[d]][[t]])[1]
+      J=dim(y_scale[[d]][[t]])[2]
       L=1
       inits <- list(lambda=matrix(1,J,L),
                     mu=matrix(1,J,1),
@@ -302,7 +282,7 @@ for (d in domains)
 	  xx <- sprintf("Data/output2_%s_%s_%s.RData",d,m,t)
 	  readline(paste(d, m, t))
       output <- simple(n_iter = 23500,burn_in = 16000,
-                                      y = y_center[[d]][[t]][,-c(1,16)],
+                                      y = y_scale[[d]][[t]],
                                       inits,
                                       0,10000,
                                       1/1000,1/1000,
@@ -324,112 +304,6 @@ for (d in domains)
 
 
 dev.off()
-
-
-
-
-for (d in domains[3])
-{
-  for (m in models[models %in% c("1","2","3")])
-  {
-    for (t in years[years %in% c("2017")])
-    {
-      xx <- sprintf("Data/output2_%s_%s_%s.RData",d,m,t)
-      load(file=xx);
-      for (l in c(1))
-      { 
-        xf <- sprintf("Figures/lambda_%s_%s_%s_%d.png",d,m,t,l)
-        png(xf,width = 700, height = 350)
-        par(mfrow=c(2,1))
-        par(mar=c(1,1,1,1))
-        plot(output$lambda[,l], type="l",xlab = "iterations", ylab=  paste(d, m, t, l))
-        plot(cumsum((output$lambda[,l]))/(1:7500), type="l", xlab = "iterations", ylab=  paste(d, m, t, l))
-        dev.off()
-      }
-   }
- } 
-}
-      
-
-jpeg("Deltaoverall2_.jpeg")
-
-      }      
-    } 
-  }  
-}
-dev.off()
-
-par(mfrow=c(2,1))
-par("mar")
-par(mar=c(1,1,1,1))
-par(mfrow=c(2,1))
-
-for (d in domains[domains == "Social"])
-{
-  for (m in models[models == "1"])
-  {
-    for (t in years[years == "2008"])
-    {
-	   xx <- sprintf("Data/output2_%s_%s_%s.RData",d,m,t)
-	   load(file=xx);
-      for (l in 1:length(names[[d]]))
-      { 
-        plot(output$Sigma[,l], type="l")
-        plot(cumsum((output$Sigma[,l]))/(1:2000), type="l")
-        readline(paste(d, m, t, l))
-      }
-      
-    } 
-  }
-  
-}
-dev.off()
-
-par(mfrow=c(2,1))
-par(mar=c(1,1,1,1))
-for (d in domains[3])
-{
-  for (m in models[models %in% c("0","1","2","3")])
-  {
-    for (t in years[years  %in% c("2010","2009")])#,"2012",ifelse(d == "Social", "2016","2017"))])
-    {
-	   xx <- sprintf("Data/output2_%s_%s_%s.RData",d,m,t)
-	   load(file=xx)
-      for (l in c(28,30,59,77,34,64))
-      { 
-        readline(paste(d, m, t, l))
-        #xf <- sprintf("Figures/delta_%s_%s_%s_%s.png",d,m,t,l)
-        #png(xf, width = 700, height = 350) 
-        plot(output$delta[,l][2500:7500], type="l", xlab="iterations", ylab= paste(d, m, t, l))
-        plot(cumsum(output$delta[,l])/(1:7500), type="l", xlab="iterations", ylab= paste(d, m, t, l)) 
-       
-      }       
-    } 
-  }
-}
- dev.off()       
-par(mfrow=c(2,1))
-par(mar=c(1,1,1,1))
-for (d in domains[domains == "Social"])
-
-{
-  for (m in models[models %in% c("0","1","2","3")])
-  {
-    for (t in years[years %in% c("2005","2007")])#,"2012",ifelse(d == "Social", "2016","2017"))])
-    {
-	   xx <- sprintf("Data/output2_%s_%s_%s.RData",d,m,t)
-	   load(file=xx)
-      for (l in c(1,2,3))
-      { 
-        #xf <- sprintf("Figures/deltamc_%s_%s_%s_%s.png",d,m,t,l)
-        #png(xf, width = 700, height = 350) 
-        plot(output$mu[,l][100:7500], type="l", xlab="iterations", ylab= paste(d, m, t, l))
-        plot(cumsum(output$mu[,l][1:7500])/(1:7500), type="l", xlab="iterations", ylab= paste(d, m, t, l)) 
-        readline(paste(d, m, t, l))           
-      }      
-    } 
-  } 
-}
 
 
 
@@ -481,7 +355,7 @@ for (d in domains)
   {
   for (m in models[models %in% c("0","1","2","3")])
     {
-    for (t in years[years %in% c("2004","2006","2014","2017")])
+    for (t in years)
       {
           xx <- sprintf("Data/output2_%s_%s_%s.RData",d,m,t)
           load(file=xx);
@@ -515,21 +389,6 @@ for (d in domains[1])
   }
 }
   
-
-
-
-kable(G[["Social"]][["0"]][["2017"]], format="latex", digit=2)
-kable(p[["Social"]][["0"]][["2017"]], format="latex", digit=2)
-kable(C[["Social"]][["0"]][["2017"]], format="latex", digit=2)
-N=107
-
-r <- matrix(c(G[["Environmental"]][["3"]][["2004"]],G[["Environmental"]][["3"]][["2006"]],G[["Environmental"]][["3"]][["2014"]],G[["Environmental"]][["3"]][["2017"]],
-               p[["Environmental"]][["3"]][["2004"]],p[["Environmental"]][["3"]][["2006"]],p[["Environmental"]][["3"]][["2014"]],p[["Environmental"]][["3"]][["2017"]],
-	C[["Environmental"]][["3"]][["2004"]],C[["Environmental"]][["3"]][["2006"]],C[["Environmental"]][["3"]][["2014"]],C[["Environmental"]][["3"]][["2017"]]
-	),nrow=4, ncol=3)
-colnames(r) <- c("G(m)","p(m)","C(m)")
-rownames(r) <- c("2004","2006","2014","2017")
-kable(t(r), format="latex", digit=2)
 
 #Factor loadings----------------------------------------------------------------
 lambda <- vector("list",length=length(domains))
@@ -587,8 +446,6 @@ for (d in domains)
     }
   }
 }
-colnames(summary[["Environmental"]][["2"]][["2017"]]) <- NULL
-kable(cbind(t(summary[["Environmental"]][["0"]][["2017"]]),t(summary[["Environmental"]][["2"]][["2017"]])), format="latex", digit=2)
 #variances------------------------------------------------------------
 sigma <- vector("list",length=length(domains))
 f <- vector("list",length=length(domains))
@@ -606,7 +463,7 @@ for (d in domains)
     names(sigma[[d]][[m]]) <- years
     f[[d]][[m]] <- vector("list",length=length(years))
     names(f[[d]][[m]]) <- years
-    for (t in years[years %in% c("2004","2006","2014","2017")])
+    for (t in years)
     { 
       J= ifelse((d == "Social" & t =="2017"),dim(y_center[[d]][[t]])[2]-2,dim(y_center[[d]][[t]])[2])
       f[[d]][[m]][[t]] <- matrix(NA,5,J)
@@ -637,16 +494,12 @@ for (d in domains)
   }
 }
 
-#sigma[["Economic"]][["0"]]
 for (d in domains)
 {
   for (m in models[models %in% c("0","1","2","3")])
   {
-    for (t in years[years %in% c("2017")])
+    for (t in years)
     { 
-      #xx <- sprintf("Data/output2_%s_%s_%s.RData",d,m,t)
-      #load(file=xx)
-      #cat(xx)
       J= dim(output$lambda)[2]
       for (i in if(d == "Social" & t == "2017")
       {names[[d]][-c(1,16)]}else names[[d]])
@@ -657,23 +510,7 @@ for (d in domains)
     }
   }
 }
-prova <- rbind(f[["Environmental"]][["0"]][["2017"]]["mean",],summary[["Environmental"]][["0"]][["2017"]][c(1,5),])
-row.names(prova) <- c("meanSc","lambda", "IQR")
-prova1 <- as.data.frame(t(prova))
-prova1$Indicator <- row.names(prova1)
-prova2 <- arrange(prova1, desc(meanSc))
-prova2 <- prova2 %>%
-  select(4,1,2,3)
-prova <- rbind(f[["Environmental"]][["2"]][["2017"]]["mean",],summary[["Environmental"]][["2"]][["2017"]][c(1,5),])
-row.names(prova) <- c("meanSc","lambda", "IQR")
-prova1 <- as.data.frame(t(prova))
-prova1$Indicator <- row.names(prova1)
-prova3 <- arrange(prova1, desc(meanSc))
-prova3 <- prova3 %>%
-  select(4,1,2,3)
-kable(merge(prova2,prova3,by = "Indicator",sort=FALSE),format="latex",digit=2)
-colnames(f[["Environmental"]][["2"]][["2017"]]) <- NULL
-kable(cbind(t(f[["Environmental"]][["0"]][["2017"]][1:4,]),t(f[["Environmental"]][["2"]][["2017"]][1:4,])), format="latex", digit=2)
+
 #Spatial parameter--------------------------------------------------------------
 a <- vector("list",length=length(domains))
 names(a) <- domains
@@ -805,11 +642,6 @@ for (d in domains)
       xx <- sprintf("Data/output2_%s_%s_%s.RData",d,m,t)
       load(file=xx)
       delta[[d]][[m]][[t]] <- output$d %>% as.data.frame()
-      #if (m %in% c("1","4"))
-      #{
-      #  delta[[d]][[m]][[t]][sapply(delta[[d]][[m]][[t]], is.numeric)] <- delta[[d]][[m]][[t]][sapply(delta[[d]][[m]][[t]], is.numeric)] * -1
-      #} else {
-      #  delta[[d]][[m]][[t]][sapply(delta[[d]][[m]][[t]], is.numeric)] <- delta[[d]][[m]][[t]][sapply(delta[[d]][[m]][[t]], is.numeric)] * 1
       d_summary[[d]][[m]][[t]] <- multi.sapply(delta[[d]][[m]][[t]], mean, median , third_qu=function(x) quantile(x, 0.75),firt_qu= function(x) quantile(x,0.25), IQR = IQR) %>%
        as.data.frame()%>%
        mutate(comune = province 
@@ -818,7 +650,7 @@ for (d in domains)
     }
   }
 }
-#d_summary[["Economic"]]
+
 #Plot
 plot_delta <- vector("list",length=length(domains))
 names(plot_delta) <- domains
