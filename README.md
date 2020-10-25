@@ -1,4 +1,4 @@
-# Bayesian latent factor analysis for spatially correlated data: Sampler.
+# Bayesian latent factor analysis for spatially correlated multivariate data: Sampler.
 
 The fuction implements the Gibbs sampling alghorithm described in Hogan and Tchernis (2004).
 In particular it builds five Metropolis Hastings steps, one for each models' spatial specification described in the paper. The main purpose of the function is to model spatial correlation among geographical areas, thus including such information in the models'estimate. The output of the function are the simulated posterior parameters distributions of <img src="https://render.githubusercontent.com/render/math?math=\boldsymbol{\lambda}">, the vector of factor loadings,  <img src="https://render.githubusercontent.com/render/math?math=\delta_i">, the latent variable in each areas, **d** the expected value of the latent factor and **Y**, posterior replications of the data at hands. 
