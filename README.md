@@ -5,7 +5,7 @@ In particular it builds five Metropolis Hastings steps, one for each models' spa
 
 The first empirical illustration is based on the public data-set from "A misura di comune". In particular I focus on the Varese province which entails 138 different areas. I analyse the year 2014 and 2015.  Within this implementation, the latent factor should represents the latent well-being of each areas.
 
-The second empirical illustration rely instead on the Province-BES dataset. Thus, we extend the analysis to the entire Italian territory asessing the well-being of provinces over the years. 
+The second empirical illustration rely instead on the Province-BES dataset. Thus, we extend the analysis to the entire Italian territory assessing the well-being of provinces over the years. 
 
 ## References:
 
