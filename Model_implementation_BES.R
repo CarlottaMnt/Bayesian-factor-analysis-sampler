@@ -14,6 +14,7 @@ library(gtable)
 library(grid)
 library(gridExtra)
 library(rstan)
+#import function
 source("simple.R")
 #Read_in the data
 data<- read.csv("BES_data/Imputed_BES_dataset.csv")
@@ -23,11 +24,10 @@ data <- data %>%
 location <- readxl::read_xlsx("BES_data/Location_BES.xlsx")
 data <- cbind(data,location)
 data_norm <- read.csv("BES_data/Imputed_BES_normalized.csv")
-
-#factor_eco <- read.csv("factor_econ.csv")
+#polygons
 italgeo <-  sf::st_read("BES_data/italgeo.shp")
 italgeo$DEN_UTS <- as.character(italgeo$DEN_UTS)
-#English names of the elementary indicato
+#English names of the elementary indicator
 names <- vector("list",length=4)
 names(names) <- c("Overall","Social","Economic","Environmental")
 names[[1]] <-  c("Employees in cultural business",
@@ -172,7 +172,7 @@ for (i in 1:N)
 #Model 3D
 PSI_04_d <- nbdists(w, coords= longlat04,longlat = TRUE) #Crate the list of neighbors
 
-#Model implementation-------------------------------------------------------
+#Models implementation-------------------------------------------------------
 
 models <-  c("0","1","2","3","4","5","6")
 years <- c("2004","2005","2006","2007","2008","2009","2010","2011","2012","2013","2014","2015","2016","2017")
