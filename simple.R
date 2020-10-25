@@ -1,8 +1,3 @@
-#install.packages("matlab")
-#install.packages("Matrix")
-#install.packages("mvtnorm")
-#install.packages("invgamma")
-#install.packages("matrixcalc")
 library(matlab)
 library(Matrix)
 library(mvtnorm)
@@ -10,7 +5,19 @@ library(invgamma)
 library(tidyverse)
 library(matrixcalc)
 
-#Function
+
+rep.row <- function(x,n){
+  matrix(rep(x,each=n),nrow=n)
+}
+
+#inits <- list(lambda=matrix(0,J,L),
+#              mu=matrix(0,J,1),
+#              Sigma=diag(J),
+#              PSI=diag(N),
+#              delta=matrix(1,nrow=N,ncol=1),
+#              a = 0
+#              )
+#
 simple <- function(n_iter = 1000,
                    burn_in = 500,
                    y,
@@ -47,8 +54,8 @@ simple <- function(n_iter = 1000,
                   #D = matrix(NA,n_iter,(N*L)*(N*L)),
                   #Diff=matrix(NA,n_iter,(N*L)*(N*L)),
                   PSI = matrix(NA,n_iter-burn_in,(N*L)*(N*L)),
-                  Sigma=matrix(NA,n_iter-burn_in,J)
-                  #mu=matrix(NA,n_iter,J)
+                  Sigma=matrix(NA,n_iter-burn_in,J),
+                  mu=matrix(NA,n_iter-burn_in,J)
                   )
   
   start_time = Sys.time()
@@ -76,15 +83,16 @@ simple <- function(n_iter = 1000,
         }
       cat("Exit")
       } 
+      cat("j",j,"lambda",param$lambda[j,L])
       #Step 2
       V.mu[j]= param$Sigma[j,j]*V_mu/(param$Sigma[j,j]+V_mu*N)
-      mu.hat[j]=V.mu[j]*t(ones(N)[,j])%*%(y[,j]-param$delta*param$lambda[j,L])/
+      mu.hat[j]=V.mu[j]*t((ones(N)[,j]))%*%(y[,j]-param$delta*param$lambda[j,L])/
         param$Sigma[j,j]
       param$mu[j]= rnorm(1,mu.hat[j],sqrt(V.mu[j]))
-      #cat("mu",param$mu)
+      cat("j",j,"mu",param$mu[j])
       if ( t > burn_in)
       samples[["lambda"]][t-burn_in-1,j]=param$lambda[j,L]
-      #samples[["mu"]][t-1,]=t(param$mu)
+      samples[["mu"]][t-burn_in-1,]=t(param$mu)
     }
     
       #Step 3
@@ -118,11 +126,13 @@ simple <- function(n_iter = 1000,
         alpha.hat=(alpha + N )/2
         beta.hat[j]=(t(y[,j] - ones(N)[,j]* param$mu[j]- (param$delta)
                        * param$lambda[j,L])%*%
-                       ((y[,j] - ones(N)[,j]*param$mu[j]-
-                                    param$delta * param$lambda[j,L]))+ beta)/2
+                       (y[,j] - ones(N)[,j]*param$mu[j]-
+                                    param$delta * param$lambda[j,L])+ beta)/2
+        cat("j",j,"beta",beta.hat[j])
         param$Sigma[j,j]=rinvgamma(1,alpha.hat,beta.hat[j])
+        cat("Sigma", param$Sigma[j,j])
       }
-	  if ( t > burn_in)
+      if ( t > burn_in)
       samples[["Sigma"]][t-burn_in-1,]=as.vector(diag(param$Sigma))
       #Step 5 Metropolis Hastings
       #Model 2(Marginal)
@@ -154,7 +164,7 @@ simple <- function(n_iter = 1000,
           Xi <- eigen(R)
           xi <- sort(Xi$values)
           xi_inv <- 1/(xi)
-          proposed_a = rnorm(1,param$a,sqrt(tuning))
+          proposed_a = rnorm(1,param$a,tuning)
           if (xi_inv[1] > proposed_a  | proposed_a > xi_inv[N])
           {
             A = log(0)#proposed_a = rnorm(1,param$a,sqrt(tuning))
@@ -169,7 +179,7 @@ simple <- function(n_iter = 1000,
             PSI = M_1 %*% B_inv %*% M_1
             #PSI[lower.tri(PSI)] <- t(PSI)[lower.tri(PSI)]
            return(dmvnorm(t(param$delta),rep(0,N),PSI,log = TRUE)+
-                     dnorm(x,mu_a,V_a, log = TRUE) + dnorm(mu_x,x,sqrt(tuning),log = TRUE))
+                     dnorm(x,mu_a,V_a, log = TRUE) + dnorm(mu_x,x,tuning,log = TRUE))
           }   
           A = (target_2(proposed_a,param$a,R,O))- #+ log(pnorm(xi_inv[N],param$a,sqrt(tuning)) - pnorm(xi_inv[1],param$a,sqrt(tuning)))) -
             (target_2(param$a,proposed_a,R,O))# + log(pnorm(xi_inv[N],proposed_a,sqrt(tuning)) - pnorm(xi_inv[1],proposed_a,sqrt(tuning))))
@@ -181,7 +191,7 @@ simple <- function(n_iter = 1000,
           Xi <- eigen(R)
           xi <- sort(Xi$values)
           xi_inv <- 1/(xi)
-          proposed_a = rnorm(1,param$a,sqrt(tuning))
+          proposed_a = rnorm(1,param$a,tuning)
           if (xi_inv[1] > proposed_a  | proposed_a > xi_inv[N])
           {
             A = log(0) #proposed_a = rnorm(1,param$a,sqrt(tuning))
@@ -196,16 +206,16 @@ simple <- function(n_iter = 1000,
             M_1=sqrt(diag(1/M))
             PSI=M_1 %*% B_inv %*% M_1
             return(dmvnorm( t(param$delta) , rep(0,N) , PSI , log = TRUE ) +
-                     dnorm(x,mu_a,V_a, log = TRUE) + dnorm(mu_x,x,sqrt(tuning),log = TRUE))
+                     dnorm(x,mu_a,V_a, log = TRUE) + dnorm(mu_x,x,tuning,log = TRUE))
           }   
-          A =  (target_3(proposed_a, param$a,R,W,O)+ log(pnorm(xi_inv[N],param$a,sqrt(tuning))- pnorm(xi_inv[1],param$a,sqrt(tuning))))-
-            (target_3(param$a,proposed_a,R,W,O)+log(pnorm(xi_inv[N],proposed_a,sqrt(tuning))- pnorm(xi_inv[1],proposed_a,sqrt(tuning))))   
+          A =  target_3(proposed_a, param$a,R,W,O)-# # log(pnorm(xi_inv[N],param$a,sqrt(tuning))- pnorm(xi_inv[1],param$a,sqrt(tuning))))-
+            target_3(param$a,proposed_a,R,W,O)#+log(pnorm(xi_inv[N],proposed_a,sqrt(tuning))- pnorm(xi_inv[1],proposed_a,sqrt(tuning))))   
           }
         }
         #Model 3C
         if (model =="4")
         {
-          proposed_a = rnorm(1,param$a,sqrt(tuning))
+          proposed_a = rnorm(1,param$a,tuning)
           
           if (proposed_a <=0)
           {
@@ -215,16 +225,16 @@ simple <- function(n_iter = 1000,
           target_4 <- function(x,mu_x,W)
           {
             for (i in 1:N){
-              o_c[i]=sum(exp(-x*W[i,]))
+              o_c[i]=sum(exp(-x*W[i,-i]))
             }
             O_c=diag(o_c)
-            for (i in 1:dim(y)[1])
+            for (i in 1:N)
             {
-              W_c[i,]= exp(-x*W[i,])
+              W_c[i,-i]= -exp(-x*W[i,-i])
             }
             
             Diff= O_c-W_c
-            diag(Diff) <- 1
+            #diag(Diff) <- 1
             PSI=solve(Diff)
             return(dmvnorm(t(param$delta),rep(0,N),PSI,log = TRUE) +
                      dnorm(x,mu_a,V_a, log = TRUE) + dnorm(mu_x,x,sqrt(tuning),log = TRUE))
@@ -295,7 +305,7 @@ simple <- function(n_iter = 1000,
         if (model =="3")
         {
           B=O-param$a*W
-          diag(B) <- diag(O)
+          #diag(B) <- diag(O)
           B_inv=solve(B)
           M=diag(B_inv)
           M_1=sqrt(diag(1/M))
@@ -306,14 +316,14 @@ simple <- function(n_iter = 1000,
           for (i in 1:N){
             o_c[i]=sum(exp(-param$a*W[i,]))
           }
-          O_c=diag(o_c)
+          O_c = diag(o_c)
           for (i in 1:N[1])
           {
-            W_c[i,]= exp(-param$a*W[i,])
+            W_c[i,]= -exp(-param$a*W[i,])
           }
           
           Diff= O_c-W_c
-          diag(Diff) <- 1
+          #diag(Diff) <- 1
           #samples[["Diff"]][t-1,]=Diff
           param$PSI=solve(Diff)
         }
@@ -342,7 +352,7 @@ simple <- function(n_iter = 1000,
       }
 	  }
   }
-  cat("\nDONE\n","Metropolis Hastings Acceptance rate", count/n_iter )
+  cat("\nDONE\n","Metropolis Hastings Acceptance rate", count/(n_iter))
   return(samples)
 }
 
