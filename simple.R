@@ -10,14 +10,14 @@ rep.row <- function(x,n){
   matrix(rep(x,each=n),nrow=n)
 }
 
-#inits <- list(lambda=matrix(0,J,L),
-#              mu=matrix(0,J,1),
-#              Sigma=diag(J),
-#              PSI=diag(N),
-#              delta=matrix(1,nrow=N,ncol=1),
-#              a = 0
-#              )
-#
+#inits <- list(lambda=matrix(10,J,L),
+#                    mu=matrix(0,J,1),
+#                    Sigma=diag(1,J),
+#                    PSI=diag(N),
+#                    delta= rmvnorm(N,rep(0),diag(1)),
+#                    a= ifelse (m %in% c("1","4"),1,0)
+#      )
+
 simple <- function(n_iter = 1000,
                    burn_in = 500,
                    y,
