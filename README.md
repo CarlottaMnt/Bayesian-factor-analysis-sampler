@@ -18,11 +18,11 @@ The main function's input are:
      
      inits: list of initial values for each parameter.
      
-     g, G, **\alpha**, **\beta**, **V_\mu**: set of prior parameters. 
+     g, G, <img src="https://render.githubusercontent.com/render/math?math={\alpha}, <img src="https://render.githubusercontent.com/render/math?math={\beta}, <img src="https://render.githubusercontent.com/render/math?math={V_\mu}: set of prior parameters. 
      
      R, W, w, O: the adjacency(weight), the distance, the neighbours matrices respectively. Where w is the list indicating neighbouring areas.
      
-     **mu_a**, V_a: spatial parameter prior distribution mean and variance. 
+     <img src="https://render.githubusercontent.com/render/math?math={mu_a}, <img src="https://render.githubusercontent.com/render/math?math={V_a}: spatial parameter prior   distribution mean and variance. 
      
      tuning: the value for the tuning parameter in the Metropolis Hastings step.
      
