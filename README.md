@@ -16,8 +16,9 @@ The main function's input are:
 1. **g, G**, <img src="https://render.githubusercontent.com/render/math?math={\alpha}">, <img src="https://render.githubusercontent.com/render/math?math={\beta}">, <img src="https://render.githubusercontent.com/render/math?math={V_\mu}">: set of prior parameters.       
 1. **R, W, w, O**: the adjacency(weight), the distance, the neighbours matrices respectively. Where w is the list indicating neighbouring areas       
 1. <img src="https://render.githubusercontent.com/render/math?math={\mu_a}">, <img src="https://render.githubusercontent.com/render/math?math={V_a}">: spatial parameter prior   distribution mean and variance.        
-1. **tuning**: the value for the tuning parameter in the Metropolis Hastings step.        
-1. **model**: the model to be implemented. Could takes values 0 (Spatial Independence),1 (Marginal specification), 2 (CAR 3A), 3 (CAR 3B). 
+1. **tuning**: the value for the tuning parameter in the Metropolis Hastings step.      
+1. **tuning_lambda**: the starting value to set for the lambda paraemeter to converge.        
+3. **model**: the model to be implemented. Could takes values 0 (Spatial Independence),1 (Marginal specification), 2 (CAR 3A), 3 (CAR 3B). 
 
 
 ## References:
