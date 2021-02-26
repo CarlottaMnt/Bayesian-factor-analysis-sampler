@@ -8,15 +8,15 @@ The first empirical illustration is based on the public data-set from "A misura 
 The second empirical illustration relies instead on the Public "Province-BES" dataset. Thus, we extend the analysis to the entire Italian territory assessing the well-being of provinces over the years 2014-2017. 
 
 The main function's input are:
-     1. n iter: number of simulated values.    
+     1.n iter: number of simulated values.    
      1.burn in : number of burn in iterations.     
      1.y: the data frame <img src="https://render.githubusercontent.com/render/math?math={N\times D}"> of scaled elementary indicators.      
      1.inits: list of initial values for each parameter.       
      1.g, G, <img src="https://render.githubusercontent.com/render/math?math={\alpha}">, <img src="https://render.githubusercontent.com/render/math?math={\beta}">, <img src="https://render.githubusercontent.com/render/math?math={V_\mu}">: set of prior parameters.       
-    1. R, W, w, O: the adjacency(weight), the distance, the neighbours matrices respectively. Where w is the list indicating neighbouring areas       
-    1. <img src="https://render.githubusercontent.com/render/math?math={mu_a}">, <img src="https://render.githubusercontent.com/render/math?math={V_a}">: spatial parameter prior   distribution mean and variance.        
-    1. tuning: the value for the tuning parameter in the Metropolis Hastings step.        
-    1. model: the model to be implemented. Could takes values 0 (Spatial Independence),1 (Marginal specification), 2 (CAR 3A), 3 (CAR 3B). 
+    1.R, W, w, O: the adjacency(weight), the distance, the neighbours matrices respectively. Where w is the list indicating neighbouring areas       
+    1.<img src="https://render.githubusercontent.com/render/math?math={\mu_a}">, <img src="https://render.githubusercontent.com/render/math?math={V_a}">: spatial parameter prior   distribution mean and variance.        
+    1.tuning: the value for the tuning parameter in the Metropolis Hastings step.        
+    1.model: the model to be implemented. Could takes values 0 (Spatial Independence),1 (Marginal specification), 2 (CAR 3A), 3 (CAR 3B). 
 
 
 ## References:
