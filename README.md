@@ -12,16 +12,11 @@ The main function's input are:
      n iter: number of simulated values.  
      burn in : number of burn in iterations.
      y: the data frame <img src="https://render.githubusercontent.com/render/math?math={N\times D}"> of scaled elementary indicators. 
-     inits: list of initial values for each parameter.
-     
-     g, G, <img src="https://render.githubusercontent.com/render/math?math={\alpha}">, <img src="https://render.githubusercontent.com/render/math?math={\beta}">, <img src="https://render.githubusercontent.com/render/math?math={V_\mu}">: set of prior parameters. 
-     
-     R, W, w, O: the adjacency(weight), the distance, the neighbours matrices respectively. Where w is the list indicating neighbouring areas.
-     
-     <img src="https://render.githubusercontent.com/render/math?math={mu_a}">, <img src="https://render.githubusercontent.com/render/math?math={V_a}">: spatial parameter prior   distribution mean and variance. 
-     
-     tuning: the value for the tuning parameter in the Metropolis Hastings step.
-     
+     inits: list of initial values for each parameter.  
+     g, G, <img src="https://render.githubusercontent.com/render/math?math={\alpha}">, <img src="https://render.githubusercontent.com/render/math?math={\beta}">, <img src="https://render.githubusercontent.com/render/math?math={V_\mu}">: set of prior parameters.  
+     R, W, w, O: the adjacency(weight), the distance, the neighbours matrices respectively. Where w is the list indicating neighbouring areas  
+     <img src="https://render.githubusercontent.com/render/math?math={mu_a}">, <img src="https://render.githubusercontent.com/render/math?math={V_a}">: spatial parameter prior   distribution mean and variance.    
+     tuning: the value for the tuning parameter in the Metropolis Hastings step.   
      model: the model to be implemented. Could takes values 0 (Spatial Independence),1 (Marginal specification), 2 (CAR 3A), 3 (CAR 3B). 
 
 
