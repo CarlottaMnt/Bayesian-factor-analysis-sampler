@@ -7,6 +7,20 @@ The first empirical illustration is based on the public data-set from "A misura 
 
 The second empirical illustration relies instead on the Public "Province-BES" dataset. Thus, we extend the analysis to the entire Italian territory assessing the well-being of provinces over the years 2014-2017. 
 
+
+The main function's input are:
+\begin{itemize}
+    \item n\_iter: number of simulated values.
+    \item burn\_in : number of burn in iterations
+    \item y: the data frame $N\times D$ of scaled elementary indicators. 
+    \item inits: list of initial values for each parameter.
+    \item g, G, $\alpha$, $\beta$, $V_\mu$: set of fixed prior parameter from  \ref{Prior1}, \ref{Prior2}, \ref{Prior3}.
+    \item R, W, w, O: the adjacency(weight), the distance, the neighbours matrices respectively. Where w is the list indicating neighbouring areas.
+    \item $mu_a$, $V_a$: spatial parameter prior distribution mean and variance. 
+    \item tuning: the value for the tuning parameter in the Metropolis Hastings step.
+    \item model: the model to be implemented. Could takes values $0$ (Spatial Independence),1 (Marginal specification), 2 (CAR 3A), 3 (CAR 3B). 
+\end{itemize}
+
 ## References:
 
 J. W. Hogan and R. Tchernis.  Bayesian factor analysis for spatially correlated data, with applica-tion to summarizing area-level material deprivation from census data.Journal of the AmericanStatistical Association, 99(466):314–324, 2004
